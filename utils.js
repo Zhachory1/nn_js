@@ -29,8 +29,3 @@ function make_batch(X, y, batch_size) {
 	}
 	return [batch_X, batch_y];
 }
-
-function print(value) {
-	var precision = 14;
-	console.log(math.format(value, precision));
-}

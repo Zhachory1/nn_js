@@ -9,7 +9,7 @@ class NN {
 					let rows = nodes_per_layer[i + 1];
 					let cols = nodes_per_layer[i];
 					let new_weights = new Matrix(rows, cols);
-					new_weights.randomize();
+					new_weights.randomize(0, 1);
 					this.weights.push(new_weights);
 				}
 				if (typeof learning_rate === "number" && learning_rate > 0) {
@@ -32,9 +32,9 @@ class NN {
 		return this.lr;
 	}
 
-	randomize_weights() {
+	randomize_weights(min = 0, max = 1) {
 		for (var i = this.weights.length - 1; i >= 0; i--) {
-			this.weights[i].randomize();
+			this.weights[i].randomize(min, max);
 		}
 	}
 
@@ -46,11 +46,11 @@ class NN {
 	}
 
 	guess(inputs) {
-		if (!(inputs instanceof Matrix)) {
-			console.error("Inputs must be of instance Matrix.");
+		if (!Array.isArray(inputs)) {
+			console.error("Inputs must be of type Array.");
 			return;
 		}
-		let prev_out = inputs;
+		let prev_out = Matrix.set(inputs);
 		for (var i = 0; i < this.weights.length; i++) {
 			if (prev_out.rows !== this.weights[i].cols) {
 				console.error("Input size must be of size [", this.weights[i].cols,
@@ -64,18 +64,18 @@ class NN {
 	}
 
 	stochastic(inputs, true_outs) {
-		if (!(inputs instanceof Matrix) || !(true_outs instanceof Matrix)) {
-			console.error("Inputs and true outputs must be of instance Matrix.");
+		if (!Array.isArray(inputs) || !Array.isArray(true_outs)) {
+			console.error("Inputs and true outputs must be Arrays.");
+			return;
+		}
+		if (inputs.length !== this.weights[0].cols) {
+			console.error("Input size must be of size [", this.weights[0].cols,
+				"] and not of size [", inputs.length, "].");
 			return;
 		}
 		// Get outs of every layer. Feed forward
-		let prev_out = [inputs];
+		let prev_out = [Matrix.set(inputs)];
 		for (var i = 0; i < this.weights.length; i++) {
-			if (prev_out[i].rows !== this.weights[i].cols) {
-				console.error("Input size must be of size [", this.weights[i].cols,
-					"] and not of size [", prev_out[i].rows, "].");
-				return;
-			}
 			let pre_activate = Matrix.dot(this.weights[i], prev_out[i]);
 			prev_out.push(Matrix.map(pre_activate, this.act.activate));
 		}
@@ -83,7 +83,7 @@ class NN {
 		// Get errors of layers. Back propagate
 		let errors = Array(this.weights.length).fill(new Matrix());
 		let neg_outs = Matrix.scale(prev_out.slice(-1)[0], -1);
-		let pre_square = Matrix.add(true_outs, neg_outs);
+		let pre_square = Matrix.add(Matrix.set(true_outs), neg_outs);
 		errors[errors.length - 1].set(Matrix.map(pre_square, square));
 		this.previous_error.push(errors[errors.length - 1].sum());
 		for (var i = this.weights.length - 1; i > 0; i--) {
@@ -106,7 +106,7 @@ class NN {
 	}
 
 	mini_batch(inputs, true_outs) {
-		if (!Array.isArray(true_outs)) {
+		if (!Array.isArray(inputs) || !Array.isArray(true_outs)) {
 			console.error("Inputs and true outputs must be of Arrays.");
 			return;
 		}
@@ -123,14 +123,14 @@ class NN {
 			sum_deltas.push(new Matrix(rows, cols));
 		}
 		for (var i = inputs.length - 1; i >= 0; i--) {
+			if (inputs[i].length !== this.weights[0].cols) {
+				console.error("Input size must be of size [", this.weights[0].cols,
+					"] and not of size [", inputs.length, "].");
+				return;
+			}
 			// Get outs of every layer. Feed forward
-			let prev_out = [inputs[i]];
+			let prev_out = [Matrix.set(inputs[i])];
 			for (var i = 0; i < this.weights.length; i++) {
-				if (prev_out[i].rows !== this.weights[i].cols) {
-					console.error("Input size must be of size [", this.weights[i].cols,
-						"] and not of size [", prev_out[i].rows, "].");
-					return;
-				}
 				let pre_activate = Matrix.dot(this.weights[i], prev_out[i]);
 				prev_out.push(Matrix.map(pre_activate, this.act.activate));
 			}
@@ -139,7 +139,7 @@ class NN {
 			// Errors is a 1 dimensional array of matrices;
 			let errors = Array(this.weights.length).fill(new Matrix());
 			let neg_outs = Matrix.scale(prev_out.slice(-1)[0], -1);
-			let pre_square = Matrix.add(true_outs[i], neg_outs);
+			let pre_square = Matrix.add(Matrix.set(true_outs[i]), neg_outs);
 			errors[errors.length - 1].set(Matrix.map(pre_square, square));
 			sum_error += errors[errors.length - 1].sum();
 			for (var i = this.weights.length - 1; i > 0; i--) {
@@ -158,6 +158,7 @@ class NN {
 				sum_deltas[i].add(delta);
 			}
 		}
+
 		let scale = 1 / inputs.length;
 		for (var i = this.weights.length - 1; i >= 0; i--) {
 			let delta = Matrix.scale(sum_deltas[i], scale);
@@ -168,7 +169,7 @@ class NN {
 	}
 
 	train(inputs, true_outs) {
-		if (Array.isArray(inputs)) {
+		if (Array.isArray(inputs[0])) {
 			return this.mini_batch(inputs, true_outs);
 		} else {
 			return this.stochastic(inputs, true_outs);

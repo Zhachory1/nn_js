@@ -11,10 +11,11 @@ class Matrix {
 		}
 	}
 
-	randomize() {
+	randomize(min = 0, max = 1) {
 		for (let i = 0; i < this.rows; i++) {
 			for (let j = 0; j < this.cols; j++) {
-				this.data[i][j] = ((Math.round(Math.random() * 100) / 100));
+				this.data[i][j] = (Math.round((Math.random() * (max - min) + min) * 100) /
+					100);
 			}
 		}
 	}
@@ -35,16 +36,32 @@ class Matrix {
 				this.constructor(0, 0);
 				return;
 			}
-			for (var i = 0; i < new_rows; i++) {
-				if (matrix[i].length != new_cols) {
-					console.error("Matrix rows must have the same number of columns.");
-					return;
+			if (typeof matrix[0] === 'number') {
+				this.cols = 1;
+				this.rows = new_rows;
+				let data = [];
+				for (let i = 0; i < new_rows; i++) {
+					data.push([matrix[i]]);
 				}
+				this.data = data;
+			} else {
+				for (var i = 0; i < new_rows; i++) {
+					if (matrix[i].length != new_cols) {
+						console.error("Matrix rows must have the same number of columns.");
+						return;
+					}
+				}
+				this.rows = new_rows;
+				this.cols = new_cols;
+				this.data = matrix;
 			}
-			this.rows = new_rows;
-			this.cols = new_cols;
-			this.data = matrix;
 		}
+	}
+
+	static set(matrix) {
+		let results = new Matrix();
+		results.set(matrix);
+		return results;
 	}
 
 	print() {
